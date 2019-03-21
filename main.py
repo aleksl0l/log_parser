@@ -7,7 +7,7 @@ import numpy as np
 LOG_FILENAME = "003.in"
 
 failed = set()
-times = {}
+timestamps = {}
 
 
 class EventType(Enum):
@@ -29,20 +29,19 @@ def parse_line(line: str):
     if EventType[event_type] == EventType.BackendError and request_id not in failed:
         failed.add(request_id)
     elif EventType[event_type] == EventType.StartRequest:
-        times[request_id] = get_datetime(timestamp)
+        timestamps[request_id] = timestamp
     elif EventType[event_type] == EventType.FinishRequest:
-        times[request_id] = (get_datetime(timestamp) - times[request_id]).total_seconds()
-
-
-def get_datetime(timestamp: int) -> datetime:
-    return datetime.fromtimestamp(int(timestamp) / 1e6)
+        timestamps[request_id] = timestamp - timestamps[request_id]
 
 
 def main():
     with open(LOG_FILENAME, "r") as file:
         for line in file:
             parse_line(line)
-    print(len(failed), np.percentile(list(value for value in times.values()), 95))
+    diff_timestamps = [value for value in timestamps.values()]
+    percentile_95 = percentile(diff_timestamps, 95) / 1e6
+    print(f"Number failed responses: {len(failed)}")
+    print(f"95th percentile: {percentile_95}")
 
 
 if __name__ == '__main__':
