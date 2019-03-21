@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-from datetime import datetime
 from enum import Enum
 
-import numpy as np
+from numpy import percentile
 
 LOG_FILENAME = "003.in"
 
