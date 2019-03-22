@@ -3,11 +3,6 @@ from enum import Enum
 
 from numpy import percentile
 
-LOG_FILENAME = "003.in"
-
-failed = set()
-timestamps = {}
-
 
 class EventType(Enum):
     StartRequest = 1
@@ -20,27 +15,59 @@ class EventType(Enum):
     FinishRequest = 8
 
 
-def parse_line(line: str):
-    parts = line.strip().split("\t")
-    timestamp = int(parts[0])
-    request_id = int(parts[1])
-    event_type = parts[2]
-    if EventType[event_type] == EventType.BackendError and request_id not in failed:
-        failed.add(request_id)
-    elif EventType[event_type] == EventType.StartRequest:
-        timestamps[request_id] = timestamp
-    elif EventType[event_type] == EventType.FinishRequest:
-        timestamps[request_id] = timestamp - timestamps[request_id]
+class LogParser:
+    def __init__(self, path: str, percentile: int):
+        self.failed = set()
+        self.timestamps = {}
+        self.path = path
+        self.percentile = percentile
+
+    def parse_line(self, line: str):
+        parts = line.strip().split("\t")
+        timestamp = int(parts[0])
+        request_id = int(parts[1])
+        event_type = parts[2]
+        connect_id = int(parts[3]) if len(parts) > 3 else None
+        if EventType[event_type] == EventType.BackendError:
+            self.failed.add((request_id, connect_id,))
+        elif EventType[event_type] == EventType.BackendOk:
+            self.failed.discard((request_id, connect_id,))
+        elif EventType[event_type] == EventType.StartRequest:
+            self.timestamps[request_id] = timestamp
+        elif EventType[event_type] == EventType.FinishRequest:
+            self.timestamps[request_id] = timestamp - self.timestamps[request_id]
+
+    def parse(self):
+        with open(self.path, "r") as file:
+            for line in file:
+                self.parse_line(line)
+
+    @property
+    def results(self):
+        diff_timestamps = [value for value in self.timestamps.values()]
+        percentile_95 = percentile(diff_timestamps, self.percentile) / 1e6
+        number_failed = len(set(e[0] for e in self.failed))
+        return [number_failed, percentile_95]
+
+    @property
+    def result_message(self):
+        message = ("Number failed responses:\t{}\n"
+                   "95th percentile:        \t{}").format(*self.results)
+        return message
+
+    def write_results(self, path: str):
+        with open(path, "w") as file:
+            file.write(self.result_message)
+
+    def print_results(self):
+        print(self.result_message)
 
 
 def main():
-    with open(LOG_FILENAME, "r") as file:
-        for line in file:
-            parse_line(line)
-    diff_timestamps = [value for value in timestamps.values()]
-    percentile_95 = percentile(diff_timestamps, 95) / 1e6
-    print(f"Number failed responses: {len(failed)}")
-    print(f"95th percentile: {percentile_95}")
+    parser = LogParser("input.txt", 95)
+    parser.parse()
+    parser.print_results()
+    parser.write_results("output.txt")
 
 
 if __name__ == '__main__':
