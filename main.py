@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import sys
 from enum import Enum
 
 from numpy import percentile
@@ -28,7 +29,7 @@ class LogParser:
         request_id = int(parts[1])
         event_type = parts[2]
         connect_id = int(parts[3]) if len(parts) > 3 else None
-        if EventType[event_type] == EventType.BackendError:
+        if EventType[event_type] == EventType.BackendConnect:
             self.failed.add((request_id, connect_id,))
         elif EventType[event_type] == EventType.BackendOk:
             self.failed.discard((request_id, connect_id,))
