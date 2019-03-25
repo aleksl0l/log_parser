@@ -65,7 +65,10 @@ class LogParser:
 
 
 def main():
-    parser = LogParser("input.txt", 95)
+    filename = "input.txt"
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
+    parser = LogParser(filename, 95)
     parser.parse()
     parser.print_results()
     parser.write_results("output.txt")
